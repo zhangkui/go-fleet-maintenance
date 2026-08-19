@@ -1,0 +1,4 @@
+case_id: BUG-006
+architecture: linux/arm64
+record_type: bug-reproduction
+status: NOT_RUN
