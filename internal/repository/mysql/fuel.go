@@ -23,12 +23,8 @@ func scanFuel(sc func(...interface{}) error, f *entity.FuelRecord) error {
 
 // CreateFuelRecord 创建油耗记录，幂等键唯一约束兜底。
 func (r *FuelRepository) CreateFuelRecord(ctx context.Context, f entity.FuelRecord) (entity.FuelRecord, error) {
-	totalCostCents := f.TotalCostCents
-	if f.LitersMilli*f.UnitPriceCents%1000 != 0 {
-		totalCostCents++
-	}
 	res, err := r.db.ExecContext(ctx, `INSERT INTO fuel_records(vehicle_id,liters_milli,unit_price_cents,odometer_km,total_cost_cents,abnormal,recorded_at,idempotency_key,created_by)
-		VALUES(?,?,?,?,?,?,?,?,?)`, f.VehicleID, f.LitersMilli, f.UnitPriceCents, f.OdometerKM, totalCostCents, f.Abnormal, f.RecordedAt, f.IdempotencyKey, f.CreatedBy)
+		VALUES(?,?,?,?,?,?,?,?,?)`, f.VehicleID, f.LitersMilli, f.UnitPriceCents, f.OdometerKM, f.TotalCostCents, f.Abnormal, f.RecordedAt, f.IdempotencyKey, f.CreatedBy)
 	if err != nil {
 		return entity.FuelRecord{}, TranslateError(err)
 	}

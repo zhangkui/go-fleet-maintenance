@@ -43,11 +43,7 @@ func (s *FuelService) Record(ctx context.Context, in entity.FuelInput, actor ent
 	// litersMilli(毫升) / 1000 = 升；单价 分/升；总价 = 升 * 单价 = (litersMilli/1000)*unitPriceCents 分。
 	// 用整数：totalCents = litersMilli * unitPriceCents / 1000。
 	if in.TotalCostCents == 0 {
-		product := in.LitersMilli * in.UnitPriceCents
-		in.TotalCostCents = product / 1000
-		if product%1000 != 0 {
-			in.TotalCostCents++
-		}
+		in.TotalCostCents = in.LitersMilli * in.UnitPriceCents / 1000
 	}
 	if in.RecordedAt.IsZero() {
 		in.RecordedAt = s.now()
