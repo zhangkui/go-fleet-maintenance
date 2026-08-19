@@ -74,7 +74,7 @@ func (s *DriverService) CreateBinding(ctx context.Context, b entity.DriverVehicl
 	if b.StartDate.IsZero() {
 		b.StartDate = s.now()
 	}
-	exists, err := s.repo.HasActiveBindingForVehicle(ctx, b.VehicleID, s.now())
+	exists, err := s.repo.HasActiveBindingForVehicle(ctx, b.VehicleID, b.StartDate)
 	if err != nil {
 		return entity.DriverVehicleBinding{}, err
 	}

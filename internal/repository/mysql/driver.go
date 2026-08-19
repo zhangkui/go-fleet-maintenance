@@ -132,8 +132,8 @@ func (r *DriverRepository) ListActiveBindings(ctx context.Context, vehicleID int
 func (r *DriverRepository) HasActiveBindingForVehicle(ctx context.Context, vehicleID int64, at time.Time) (bool, error) {
 	var exists bool
 	err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM driver_vehicle_bindings
-		WHERE vehicle_id=? AND status=?)`,
-		vehicleID, entity.BindingStatusEnded).Scan(&exists)
+		WHERE vehicle_id=? AND status=? AND start_date<=? AND (end_date IS NULL OR end_date>=?))`,
+		vehicleID, entity.BindingStatusActive, at.Format("2006-01-02"), at.Format("2006-01-02")).Scan(&exists)
 	return exists, TranslateError(err)
 }
 
