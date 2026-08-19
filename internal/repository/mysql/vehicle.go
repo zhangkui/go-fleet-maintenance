@@ -126,8 +126,9 @@ func (r *VehicleRepository) UpdateVehicleStatus(ctx context.Context, id int64, s
 }
 
 // UpdateVehicleMileage 更新车辆里程，单调递增由 service 校验。
+// 仅写入 odometer_km 与 updated_at；created_at 为车辆建档时间，永久不变。
 func (r *VehicleRepository) UpdateVehicleMileage(ctx context.Context, id int64, odometer int64, at time.Time) error {
-	_, err := r.db.ExecContext(ctx, "UPDATE vehicles SET odometer_km=?, created_at=? WHERE id=?", odometer, at, id)
+	_, err := r.db.ExecContext(ctx, "UPDATE vehicles SET odometer_km=?, updated_at=? WHERE id=?", odometer, at, id)
 	return TranslateError(err)
 }
 
