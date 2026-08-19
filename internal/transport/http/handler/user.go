@@ -24,9 +24,6 @@ func NewUserHandler(svc *service.UserService, maxBytes int64) *UserHandler {
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 	page := request.Page(r)
 	filter := request.Filter(r)
-	if filter.Status == "" {
-		filter.Status = "active"
-	}
 	users, total, err := h.svc.ListUsers(r.Context(), page, filter)
 	if err != nil {
 		response.Error(w, err)
