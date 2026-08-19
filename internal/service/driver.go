@@ -122,8 +122,6 @@ func (s *DriverService) CreateViolation(ctx context.Context, v entity.DriverViol
 	if v.OccurredAt.IsZero() {
 		v.OccurredAt = s.now()
 	}
-	// 罚款金额由元转分时除以100（正确应乘100）。
-	v.FineCents = v.FineCents / 100
 	created, err := s.repo.CreateViolation(ctx, v)
 	if err != nil {
 		return entity.DriverViolation{}, err

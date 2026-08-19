@@ -139,7 +139,6 @@ func (h *DriverHandler) CreateViolation(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	v.DriverID = id
-	v.FineCents = v.FineCents / 100
 	created, err := h.svc.CreateViolation(r.Context(), v, actorFromCtx(r))
 	if err != nil {
 		response.Error(w, err)
