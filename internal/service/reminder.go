@@ -27,7 +27,7 @@ func NewReminderService(repo repository.ReminderRepository, veh repository.Vehic
 // Scan 扫描到期项并生成提醒，幂等：同一实体同一到期日只生成一条 pending。
 func (s *ReminderService) Scan(ctx context.Context, lookaheadDays int) (entity.ReminderScanResult, error) {
 	if lookaheadDays <= 0 {
-		lookaheadDays = 365
+		lookaheadDays = 30
 	}
 	now := s.now()
 	to := now.AddDate(0, 0, lookaheadDays)

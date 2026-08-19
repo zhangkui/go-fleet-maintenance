@@ -22,7 +22,7 @@ func NewReminderHandler(svc *service.ReminderService, maxBytes int64) *ReminderH
 
 // Scan POST /api/reminders/scan
 func (h *ReminderHandler) Scan(w http.ResponseWriter, r *http.Request) {
-	lookahead, _ := strconv.Atoi(r.URL.Query().Get("lookahead"))
+	lookahead, _ := strconv.Atoi(r.URL.Query().Get("days"))
 	result, err := h.svc.Scan(r.Context(), lookahead)
 	if err != nil {
 		response.Error(w, err)
