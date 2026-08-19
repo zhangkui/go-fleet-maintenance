@@ -64,8 +64,8 @@ func (s *AuthService) Register(ctx context.Context, username, password, email, f
 		}
 		return entity.User{}, err
 	}
-	// 默认分配 operator 角色。
-	if role, err := s.roles.GetRoleByCode(ctx, "daily_operator"); err == nil {
+	// 默认分配 operator 角色：通过角色持久化按 code 查到标准 operator 角色并完成关联。
+	if role, err := s.roles.GetRoleByCode(ctx, entity.RoleOperator); err == nil {
 		_ = s.roles.AssignRole(ctx, u.ID, role.ID)
 	}
 	s.audit.Record(ctx, entity.AuditActor{UserID: u.ID, Username: u.Username}, entity.AuditLogin, "user", u.ID, nil)
