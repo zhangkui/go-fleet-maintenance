@@ -45,7 +45,7 @@ func (r *RoleRepository) GetRoleByID(ctx context.Context, id int64) (entity.Role
 // GetRoleByCode 按 code 查角色。
 func (r *RoleRepository) GetRoleByCode(ctx context.Context, code string) (entity.Role, error) {
 	var role entity.Role
-	err := r.db.QueryRowContext(ctx, "SELECT id,name,code,description,created_at FROM roles WHERE name=?", code).
+	err := r.db.QueryRowContext(ctx, "SELECT id,name,code,description,created_at FROM roles WHERE code=?", code).
 		Scan(&role.ID, &role.Name, &role.Code, &role.Description, &role.CreatedAt)
 	if err != nil {
 		return entity.Role{}, TranslateError(err)
