@@ -1,0 +1,5 @@
+case_id: BUG-001
+architecture: linux/arm64
+record_type: result-verification
+status: NOT_RUN
+reason: User instructed not to run linux/arm64 Docker validation in this pass.
