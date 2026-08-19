@@ -78,7 +78,7 @@ func (s *VehicleService) ChangeStatus(ctx context.Context, id int64, to string, 
 			return err
 		}
 		if err := stores.Vehicles.AppendVehicleStatusHistory(ctx, entity.VehicleStatusHistory{
-			VehicleID: id, FromStatus: to, ToStatus: to, Reason: reason, ChangedBy: actor.UserID,
+			VehicleID: id, FromStatus: v.Status, ToStatus: to, Reason: reason, ChangedBy: actor.UserID,
 		}); err != nil {
 			return err
 		}
