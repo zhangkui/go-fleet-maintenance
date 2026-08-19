@@ -36,7 +36,7 @@ func (s *ReportService) FleetSummary(ctx context.Context) (entity.FleetSummary, 
 		return entity.FleetSummary{}, err
 	}
 	if b, err := json.Marshal(sum); err == nil {
-		_ = s.redis.SetCache(ctx, cacheKey, b, 0)
+		_ = s.redis.SetCache(ctx, cacheKey, b, 60*time.Second)
 	}
 	return sum, nil
 }

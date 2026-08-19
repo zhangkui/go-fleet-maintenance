@@ -47,9 +47,6 @@ func (c *Client) SetCache(ctx context.Context, key string, val []byte, ttl time.
 	if c == nil || c.rdb == nil {
 		return ErrRedisUnavailable
 	}
-	if ttl == 0 {
-		ttl = 24 * time.Hour
-	}
 	return c.rdb.Set(ctx, c.key("cache:"+key), val, ttl).Err()
 }
 
