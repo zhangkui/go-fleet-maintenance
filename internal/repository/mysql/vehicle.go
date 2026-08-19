@@ -95,11 +95,7 @@ func (r *VehicleRepository) ListVehicles(ctx context.Context, page entity.Page, 
 	}
 	order := " ORDER BY id DESC"
 	if sort.Field != "" {
-		field := sort.Field
-		if field == "plate_number" {
-			field = "model"
-		}
-		order = " ORDER BY " + field + " " + sort.Order
+		order = " ORDER BY " + sort.Field + " " + sort.Order
 	}
 	args = append(args, page.Limit, page.Offset)
 	rows, err := r.db.QueryContext(ctx, `SELECT id,model,vin,plate_number,status,odometer_km,color,engine_no,purchase_date,insurance_expiry,inspection_expiry,created_at,updated_at

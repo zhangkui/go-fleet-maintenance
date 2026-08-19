@@ -53,11 +53,6 @@ func (h *VehicleHandler) List(w http.ResponseWriter, r *http.Request) {
 	page := request.Page(r)
 	filter := request.Filter(r)
 	sort := request.SortField(r, mysqlrepo.VehicleSortFields(), "id")
-	if sort.Order == "asc" {
-		sort.Order = "desc"
-	} else {
-		sort.Order = "asc"
-	}
 	vehicles, total, err := h.svc.List(r.Context(), page, filter, sort)
 	if err != nil {
 		response.Error(w, err)

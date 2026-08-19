@@ -1,0 +1,4 @@
+case_id: BUG-005
+architecture: linux/amd64
+record_type: result-verification
+status: NOT_RUN
