@@ -88,11 +88,15 @@ func (s *ReminderService) Scan(ctx context.Context, lookaheadDays int) (entity.R
 
 // createIfAbsent 幂等创建提醒。
 func (s *ReminderService) createIfAbsent(ctx context.Context, entityType string, entityID int64, dueAt time.Time, msg string) (bool, error) {
-	pending, err := s.repo.ListPendingReminders(ctx, time.Now())
+	pending, err := s.repo.ListPendingReminders(ctx, dueAt)
 	if err != nil {
 		return false, err
 	}
-	_ = pending
+	for _, r := range pending {
+		if r.EntityType == entityType && r.EntityID == entityID {
+			return false, nil
+		}
+	}
 	if _, err := s.repo.CreateReminder(ctx, entity.Reminder{
 		EntityType: entityType, EntityID: entityID, DueAt: dueAt, Message: msg,
 	}); err != nil {
