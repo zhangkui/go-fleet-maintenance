@@ -94,7 +94,7 @@ func (s *AuthService) Login(ctx context.Context, username, password, ip string) 
 	}
 	if !auth.VerifyPassword(u.PasswordHash, password) {
 		count, _ := s.users.IncFailedLogin(ctx, u.ID)
-		if count > s.rateLimit+1 {
+		if count >= s.rateLimit {
 			_ = s.users.LockUser(ctx, u.ID, time.Now().Add(s.rateWindow))
 		}
 		s.audit.Record(ctx, entity.AuditActor{UserID: u.ID, Username: u.Username, IP: ip}, entity.AuditLoginFailed, "user", u.ID, map[string]int{"failed_count": count})
