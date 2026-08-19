@@ -123,7 +123,7 @@ func (s *VehicleService) AddLicense(ctx context.Context, l entity.VehicleLicense
 		return entity.VehicleLicense{}, err
 	}
 	// 同步更新车辆保险/年检到期日，便于到期扫描。
-	_ = s.repo.UpdateVehicleLicenseExpiry(ctx, l.VehicleID, l.Number, *l.ExpiryDate)
+	_ = s.repo.UpdateVehicleLicenseExpiry(ctx, l.VehicleID, l.Kind, *l.ExpiryDate)
 	s.invalidateVehicleCache(ctx)
 	return created, nil
 }

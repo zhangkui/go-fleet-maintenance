@@ -135,10 +135,10 @@ func (r *VehicleRepository) UpdateVehicleMileage(ctx context.Context, id int64, 
 func (r *VehicleRepository) UpdateVehicleLicenseExpiry(ctx context.Context, id int64, kind string, expiry time.Time) error {
 	switch kind {
 	case entity.LicenseKindInsurance:
-		_, err := r.db.ExecContext(ctx, "UPDATE vehicles SET inspection_expiry=? WHERE id=?", expiry, id)
+		_, err := r.db.ExecContext(ctx, "UPDATE vehicles SET insurance_expiry=? WHERE id=?", expiry, id)
 		return TranslateError(err)
 	case entity.LicenseKindInspection:
-		_, err := r.db.ExecContext(ctx, "UPDATE vehicles SET insurance_expiry=? WHERE id=?", expiry, id)
+		_, err := r.db.ExecContext(ctx, "UPDATE vehicles SET inspection_expiry=? WHERE id=?", expiry, id)
 		return TranslateError(err)
 	}
 	return nil
