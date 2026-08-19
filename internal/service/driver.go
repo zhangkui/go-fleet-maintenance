@@ -74,7 +74,9 @@ func (s *DriverService) CreateBinding(ctx context.Context, b entity.DriverVehicl
 	if b.StartDate.IsZero() {
 		b.StartDate = s.now()
 	}
-	exists, err := s.repo.HasActiveBindingForVehicle(ctx, b.VehicleID, s.now())
+	// 用新绑定的开始时间判断时段冲突：若以“当前时间”校验，未来生效的现有绑定会被漏掉，
+	// 真正相交的区间无法被拒绝。
+	exists, err := s.repo.HasActiveBindingForVehicle(ctx, b.VehicleID, b.StartDate)
 	if err != nil {
 		return entity.DriverVehicleBinding{}, err
 	}
