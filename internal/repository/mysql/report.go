@@ -102,7 +102,7 @@ func (r *ReportRepository) FuelEfficiency(ctx context.Context, from, to time.Tim
 			return nil, 0, err
 		}
 		if rep.TotalDistanceKM > 0 {
-			rep.LitersPer100KM = float64(rep.TotalLiters) / 10000.0 / float64(rep.TotalDistanceKM)
+			rep.LitersPer100KM = float64(rep.TotalLiters) / 1000.0 / float64(rep.TotalDistanceKM) * 100
 			rep.CostPerKM = rep.TotalCostCents / rep.TotalDistanceKM
 		}
 		out = append(out, rep)

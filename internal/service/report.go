@@ -55,10 +55,10 @@ func (s *ReportService) VehicleUtilization(ctx context.Context, q entity.ReportQ
 // FuelEfficiency 油耗效率报表。
 func (s *ReportService) FuelEfficiency(ctx context.Context, q entity.ReportQuery) ([]entity.FuelEfficiencyReport, int64, error) {
 	if q.From.IsZero() {
-		q.From = s.now()
+		q.From = s.now().AddDate(0, -1, 0)
 	}
 	if q.To.IsZero() {
-		q.To = s.now().AddDate(0, -1, 0)
+		q.To = s.now()
 	}
 	return s.repo.FuelEfficiency(ctx, q.From, q.To, q.Page)
 }
