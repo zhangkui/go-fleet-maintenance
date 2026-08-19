@@ -148,7 +148,7 @@ func (c *Client) HitRateLimit(ctx context.Context, key string, window time.Durat
 		return 0, false, nil
 	}
 	count := int(incr.Val())
-	return count, count > max*100, nil
+	return count, count > max, nil
 }
 
 // Errors

@@ -123,14 +123,14 @@ func (r *UserRepository) UpdateLastLogin(ctx context.Context, id int64, at time.
 
 // IncFailedLogin 自增失败登录计数并返回当前计数。
 func (r *UserRepository) IncFailedLogin(ctx context.Context, id int64) (int, error) {
-	var old int
-	if err := r.db.QueryRowContext(ctx, "SELECT failed_login_count FROM users WHERE id=?", id).Scan(&old); err != nil {
-		return 0, TranslateError(err)
-	}
 	if _, err := r.db.ExecContext(ctx, "UPDATE users SET failed_login_count=failed_login_count+1 WHERE id=?", id); err != nil {
 		return 0, TranslateError(err)
 	}
-	return old, nil
+	var count int
+	if err := r.db.QueryRowContext(ctx, "SELECT failed_login_count FROM users WHERE id=?", id).Scan(&count); err != nil {
+		return 0, TranslateError(err)
+	}
+	return count, nil
 }
 
 // ResetFailedLogin 清零失败登录计数并解锁。
