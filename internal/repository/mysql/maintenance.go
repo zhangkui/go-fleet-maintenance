@@ -245,7 +245,7 @@ func (r *MaintenanceRepository) CompleteOrder(ctx context.Context, id int64, dow
 // HasOpenOrderForPolicy 报告某计划是否已有未完成工单（用于幂等触发）。
 func (r *MaintenanceRepository) HasOpenOrderForPolicy(ctx context.Context, policyID int64) (bool, error) {
 	var exists bool
-	err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM maintenance_orders WHERE policy_id=? AND status IN ('pending','approved'))`, policyID).Scan(&exists)
+	err := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM maintenance_orders WHERE policy_id=? AND status IN ('pending','approved','in_progress'))`, policyID).Scan(&exists)
 	return exists, TranslateError(err)
 }
 

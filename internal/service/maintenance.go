@@ -204,13 +204,14 @@ func (s *MaintenanceService) TriggerDue(ctx context.Context, actor entity.AuditA
 	}
 	created := 0
 	for _, p := range due {
+		didCreate := false
 		err := s.tx.WithinTx(ctx, func(stores repository.Stores) error {
 			// 二次校验无未完工工单。
 			open, err := stores.Maintenance.HasOpenOrderForPolicy(ctx, p.ID)
 			if err != nil {
 				return err
 			}
-			if !open {
+			if open {
 				return nil
 			}
 			v, err := stores.Vehicles.GetVehicleByIDForUpdate(ctx, p.VehicleID)
@@ -226,9 +227,13 @@ func (s *MaintenanceService) TriggerDue(ctx context.Context, actor entity.AuditA
 			t := now
 			o.DowntimeStart = &t
 			_, err = stores.Maintenance.CreateOrder(ctx, o, nil)
-			if err != nil && !isConflict(err) {
+			if err != nil {
+				if isConflict(err) {
+					return nil
+				}
 				return err
 			}
+			didCreate = true
 			// 车辆转维保态。
 			if v.Status != entity.VehicleStatusInMaintenance {
 				_ = stores.Vehicles.UpdateVehicleStatus(ctx, v.ID, entity.VehicleStatusInMaintenance)
@@ -239,7 +244,7 @@ func (s *MaintenanceService) TriggerDue(ctx context.Context, actor entity.AuditA
 			}
 			return nil
 		})
-		if err == nil {
+		if err == nil && didCreate {
 			created++
 		}
 	}
