@@ -89,7 +89,7 @@ func (s *TripService) Start(ctx context.Context, id int64, actor entity.AuditAct
 		if !entity.CanTransitionTrip(t.Status, entity.TripStatusInProgress) {
 			return domain.NewCoded("validation_error", "任务状态不能从 "+t.Status+" 流转到 in_progress", domain.ErrStateTransition)
 		}
-		if err := stores.Trips.StartTrip(ctx, id, actor.UserID, s.now().Add(-24*time.Hour)); err != nil {
+		if err := stores.Trips.StartTrip(ctx, id, actor.UserID, s.now()); err != nil {
 			return err
 		}
 		return stores.Trips.AppendTripStatusHistory(ctx, entity.TripStatusHistory{
