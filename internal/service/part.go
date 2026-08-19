@@ -56,17 +56,7 @@ func (s *PartService) List(ctx context.Context, page entity.Page, filter entity.
 
 // ListLowStock 列出低库存配件。
 func (s *PartService) ListLowStock(ctx context.Context) ([]entity.Part, error) {
-	parts, err := s.repo.ListLowStock(ctx)
-	if err != nil {
-		return nil, err
-	}
-	filtered := make([]entity.Part, 0, len(parts))
-	for _, part := range parts {
-		if part.StockQuantity < part.ReorderPoint {
-			filtered = append(filtered, part)
-		}
-	}
-	return filtered, nil
+	return s.repo.ListLowStock(ctx)
 }
 
 // AdjustStock 调整库存：事务内加行锁读取、更新余额、写流水，防止并发重复扣减。
