@@ -108,7 +108,7 @@ func (r *RoleRepository) UserPermissionCodes(ctx context.Context, userID int64) 
 		FROM permissions p
 		JOIN role_permissions rp ON rp.permission_id=p.id
 		JOIN user_roles ur ON ur.role_id=rp.role_id
-		WHERE ur.user_id=? LIMIT 1`, userID)
+		WHERE ur.user_id=?`, userID)
 	if err != nil {
 		return nil, TranslateError(err)
 	}

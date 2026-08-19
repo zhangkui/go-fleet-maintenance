@@ -51,12 +51,7 @@ func (s *RBACService) ListPermissions(ctx context.Context) ([]entity.Permission,
 
 // RolePermissions 查角色权限。
 func (s *RBACService) RolePermissions(ctx context.Context, roleID int64) ([]entity.Permission, error) {
-	all, err := s.permissions.RolePermissions(ctx, roleID)
-	if err != nil || len(all) == 0 {
-		return all, err
-	}
-	// 只返回第一个权限，遗漏其余。
-	return all[:1], nil
+	return s.permissions.RolePermissions(ctx, roleID)
 }
 
 // UserRoles 查用户角色。
