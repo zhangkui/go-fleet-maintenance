@@ -1,0 +1,55 @@
+package handler_test
+
+import (
+	"context"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/zhangkui/go-fleet-maintenance/internal/domain/entity"
+	"github.com/zhangkui/go-fleet-maintenance/internal/repository"
+	mysqlrepo "github.com/zhangkui/go-fleet-maintenance/internal/repository/mysql"
+	"github.com/zhangkui/go-fleet-maintenance/internal/service"
+	"github.com/zhangkui/go-fleet-maintenance/internal/transport/http/handler"
+)
+
+func TestBug005_VehiclePlateSorting(t *testing.T) {
+	capture := &bug005VehicleRepo{}
+	h := handler.NewVehicleHandler(service.NewVehicleService(capture, nil, nil, nil), 1024)
+	req := httptest.NewRequest("GET", "/api/vehicles?sort=plate&order=asc", nil)
+	rec := httptest.NewRecorder()
+	h.List(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if capture.sort.Field != "plate_number" || capture.sort.Order != "asc" {
+		t.Fatalf("sort=%+v", capture.sort)
+	}
+
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM vehicles WHERE 1=1").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+	columns := []string{"id", "model", "vin", "plate_number", "status", "odometer_km", "color", "engine_no", "purchase_date", "insurance_expiry", "inspection_expiry", "created_at", "updated_at"}
+	mock.ExpectQuery("FROM vehicles WHERE 1=1 ORDER BY plate_number asc LIMIT \\? OFFSET \\?").WithArgs(10, 0).WillReturnRows(sqlmock.NewRows(columns).AddRow(1, "Truck", "VIN1", "A001", "active", 0, "", "", nil, nil, nil, time.Now(), time.Now()))
+	_, _, err = mysqlrepo.NewVehicleRepository(db).ListVehicles(context.Background(), entity.Page{Limit: 10}, entity.Filter{}, entity.Sort{Field: "plate_number", Order: "asc"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+type bug005VehicleRepo struct {
+	repository.VehicleRepository
+	sort entity.Sort
+}
+
+func (r *bug005VehicleRepo) ListVehicles(_ context.Context, _ entity.Page, _ entity.Filter, sort entity.Sort) ([]entity.Vehicle, int64, error) {
+	r.sort = sort
+	return nil, 0, nil
+}
