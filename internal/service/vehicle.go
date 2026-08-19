@@ -95,10 +95,13 @@ func (s *VehicleService) UpdateMileage(ctx context.Context, id, odometer int64) 
 	if err != nil {
 		return err
 	}
-	if odometer <= v.OdometerKM {
+	if odometer < v.OdometerKM {
 		return domain.ErrMileageNotIncreasing
 	}
-	if err := s.repo.UpdateVehicleMileage(ctx, id, odometer, s.now().Add(-24*time.Hour)); err != nil {
+	if odometer == v.OdometerKM {
+		return nil
+	}
+	if err := s.repo.UpdateVehicleMileage(ctx, id, odometer, s.now()); err != nil {
 		return err
 	}
 	s.invalidateVehicleCache(ctx)

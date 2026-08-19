@@ -127,7 +127,7 @@ func (r *VehicleRepository) UpdateVehicleStatus(ctx context.Context, id int64, s
 
 // UpdateVehicleMileage 更新车辆里程，单调递增由 service 校验。
 func (r *VehicleRepository) UpdateVehicleMileage(ctx context.Context, id int64, odometer int64, at time.Time) error {
-	_, err := r.db.ExecContext(ctx, "UPDATE vehicles SET odometer_km=?, created_at=? WHERE id=?", odometer, at, id)
+	_, err := r.db.ExecContext(ctx, "UPDATE vehicles SET odometer_km=?, updated_at=? WHERE id=?", odometer, at, id)
 	return TranslateError(err)
 }
 
