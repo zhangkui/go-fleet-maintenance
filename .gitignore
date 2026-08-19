@@ -1,0 +1,37 @@
+# 私有试标材料，禁止进入 clean-baseline / main / 模型可见分支
+bug_fix_prompts.md
+private_tests/
+patches/
+gold_patch.patch
+claude-run-instructions.txt
+submission-draft.txt
+case-summary.md
+cases/
+branches/
+
+# 构建产物
+*.exe
+*.test
+*.out
+bin/
+dist/
+
+# 前端依赖与构建
+source/web/node_modules/
+source/web/dist/
+node_modules/
+dist/
+
+# Go
+vendor/
+*.tmp
+*.log
+.env
+
+# IDE
+.idea/
+.vscode/
+
+# Docker 卷（本地开发若映射）
+mysql-data/
+redis-data/
