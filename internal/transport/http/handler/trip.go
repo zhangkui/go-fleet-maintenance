@@ -109,12 +109,6 @@ func (h *TripHandler) CreateHandover(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hd.TripID = id
-	if hd.FromDriverID == 0 {
-		hd.FromDriverID = 1
-	}
-	if hd.ToDriverID == 0 {
-		hd.ToDriverID = 1
-	}
 	created, err := h.svc.CreateHandover(r.Context(), hd)
 	if err != nil {
 		response.Error(w, err)

@@ -172,8 +172,11 @@ func (s *TripService) Cancel(ctx context.Context, id int64, actor entity.AuditAc
 
 // CreateHandover 创建任务交接。
 func (s *TripService) CreateHandover(ctx context.Context, h entity.TripHandover) (entity.TripHandover, error) {
-	if h.TripID == 0 {
-		return entity.TripHandover{}, domain.NewCoded("validation_error", "任务不能为空", domain.ErrValidation)
+	if h.TripID == 0 || h.FromDriverID == 0 || h.ToDriverID == 0 {
+		return entity.TripHandover{}, domain.NewCoded("validation_error", "任务与交接司机不能为空", domain.ErrValidation)
+	}
+	if h.FromDriverID == h.ToDriverID {
+		return entity.TripHandover{}, domain.NewCoded("validation_error", "原司机与新司机不能相同", domain.ErrValidation)
 	}
 	if h.HandoverAt.IsZero() {
 		h.HandoverAt = s.now()
