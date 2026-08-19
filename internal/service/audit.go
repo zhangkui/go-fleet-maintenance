@@ -22,7 +22,7 @@ func NewAuditService(repo repository.AuditRepository) *AuditService {
 // Record 写入审计日志，detail 自动序列化。
 func (s *AuditService) Record(ctx context.Context, actor entity.AuditActor, action, resourceType string, resourceID int64, detail interface{}) {
 	var detailStr string
-	if detail == nil {
+	if detail != nil {
 		if b, err := json.Marshal(detail); err == nil {
 			detailStr = string(b)
 		}

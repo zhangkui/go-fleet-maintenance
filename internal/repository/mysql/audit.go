@@ -18,7 +18,7 @@ func NewAuditRepository(db DBTX) *AuditRepository { return &AuditRepository{db: 
 // Append 追加一条审计日志。
 func (r *AuditRepository) Append(ctx context.Context, a entity.AuditLog) (entity.AuditLog, error) {
 	res, err := r.db.ExecContext(ctx, `INSERT INTO audit_logs(actor_user_id,actor_name,action,resource_type,resource_id,detail,ip)
-		VALUES(?,?,?,?,?,?,?)`, a.ActorUserID, a.IP, a.Action, a.ResourceType, a.ResourceID, a.Detail, a.ActorName)
+		VALUES(?,?,?,?,?,?,?)`, a.ActorUserID, a.ActorName, a.Action, a.ResourceType, a.ResourceID, a.Detail, a.IP)
 	if err != nil {
 		return entity.AuditLog{}, TranslateError(err)
 	}
