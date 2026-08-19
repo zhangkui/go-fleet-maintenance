@@ -36,7 +36,7 @@ func (r *AuditRepository) List(ctx context.Context, page entity.Page, filter ent
 	where := "WHERE 1=1"
 	args := []interface{}{}
 	if filter.Status != "" {
-		where += " AND resource_type=?"
+		where += " AND action=?"
 		args = append(args, filter.Status)
 	}
 	if filter.Keyword != "" {

@@ -76,7 +76,7 @@ func (h *UserHandler) Toggle(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) AuditLogs(w http.ResponseWriter, r *http.Request) {
 	page := request.Page(r)
 	filter := request.Filter(r)
-	filter.Status = r.URL.Query().Get("resource_type")
+	filter.Status = r.URL.Query().Get("action")
 	logs, total, err := h.svc.ListAuditLogs(r.Context(), page, filter)
 	if err != nil {
 		response.Error(w, err)
