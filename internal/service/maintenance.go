@@ -84,9 +84,25 @@ func (s *MaintenanceService) CreateOrder(ctx context.Context, o entity.Maintenan
 				return domain.NewCoded("conflict", "该维保计划已有未完工工单", domain.ErrConflict)
 			}
 		}
-		// 校验配件存在但跳过扣减库存。
+		// 扣减配件库存并写流水。
 		for i := range parts {
-			if _, err := stores.Parts.GetPartByIDForUpdate(ctx, parts[i].PartID); err != nil {
+			p, err := stores.Parts.GetPartByIDForUpdate(ctx, parts[i].PartID)
+			if err != nil {
+				return err
+			}
+			if p.StockQuantity < parts[i].Quantity {
+				return domain.NewCoded("validation_error", "配件库存不足: "+p.SKU, domain.ErrValidation)
+			}
+			newBalance := p.StockQuantity - parts[i].Quantity
+			if err := stores.Parts.UpdateStock(ctx, p.ID, -parts[i].Quantity, newBalance); err != nil {
+				return err
+			}
+			ref := int64(0)
+			_ = ref
+			if err := stores.Parts.AppendStockMovement(ctx, entity.PartStockMovement{
+				PartID: p.ID, ChangeQuantity: -parts[i].Quantity, Reason: entity.StockReasonOrderConsumption,
+				BalanceAfter: newBalance, CreatedBy: actor.UserID,
+			}); err != nil {
 				return err
 			}
 		}

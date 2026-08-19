@@ -149,9 +149,24 @@ func (r *MaintenanceRepository) CreateOrder(ctx context.Context, o entity.Mainte
 		return entity.MaintenanceOrder{}, err
 	}
 	o.ID = id
-	// 不写配件明细。
-	o.PartsCostCents = 0
-	o.TotalCostCents = o.LaborCostCents
+	partsCost := int64(0)
+	for _, p := range parts {
+		p.OrderID = id
+		p.LineTotalCents = p.Quantity * p.UnitCostCents
+		partsCost += p.LineTotalCents
+		if _, err := r.db.ExecContext(ctx, `INSERT INTO maintenance_order_parts(order_id,part_id,quantity,unit_cost_cents,line_total_cents)
+			VALUES(?,?,?,?,?)`, p.OrderID, p.PartID, p.Quantity, p.UnitCostCents, p.LineTotalCents); err != nil {
+			return entity.MaintenanceOrder{}, TranslateError(err)
+		}
+	}
+	o.PartsCostCents = partsCost
+	o.TotalCostCents = partsCost + o.LaborCostCents
+	if o.TotalCostCents > 0 {
+		if _, err := r.db.ExecContext(ctx, `UPDATE maintenance_orders SET parts_cost_cents=?, total_cost_cents=? WHERE id=?`,
+			partsCost, o.TotalCostCents, id); err != nil {
+			return entity.MaintenanceOrder{}, TranslateError(err)
+		}
+	}
 	o.CreatedAt = time.Now()
 	o.UpdatedAt = o.CreatedAt
 	return o, nil
