@@ -54,7 +54,7 @@ const (
 	ShiftMorning = "morning"
 	ShiftEvening = "evening"
 	ShiftNight   = "night"
-	ShiftOff     = "rest"
+	ShiftOff     = "off"
 )
 
 // DriverViolation 司机违章记录实体。

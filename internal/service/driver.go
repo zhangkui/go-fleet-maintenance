@@ -96,7 +96,7 @@ func (s *DriverService) CreateSchedule(ctx context.Context, sch entity.DriverSch
 		return entity.DriverSchedule{}, domain.NewCoded("validation_error", "司机与班次日期不能为空", domain.ErrValidation)
 	}
 	switch sch.ShiftType {
-	case entity.ShiftMorning, entity.ShiftEvening, entity.ShiftNight:
+	case entity.ShiftMorning, entity.ShiftEvening, entity.ShiftNight, entity.ShiftOff:
 	default:
 		return entity.DriverSchedule{}, domain.NewCoded("validation_error", "班次类型非法", domain.ErrValidation)
 	}
