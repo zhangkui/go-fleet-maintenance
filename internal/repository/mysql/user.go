@@ -105,7 +105,7 @@ func (r *UserRepository) ListUsers(ctx context.Context, page entity.Page, filter
 
 // UpdateUserStatus 更新启停状态。
 func (r *UserRepository) UpdateUserStatus(ctx context.Context, id int64, status string) error {
-	_, err := r.db.ExecContext(ctx, "UPDATE users SET status=? WHERE id=?", id, status)
+	_, err := r.db.ExecContext(ctx, "UPDATE users SET status=? WHERE id=?", status, id)
 	return TranslateError(err)
 }
 

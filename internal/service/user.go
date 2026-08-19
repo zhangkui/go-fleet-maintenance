@@ -44,6 +44,7 @@ func (s *UserService) ToggleUserStatus(ctx context.Context, id int64, enable boo
 	if err := s.users.UpdateUserStatus(ctx, id, status); err != nil {
 		return err
 	}
+	s.audit.Record(ctx, actor, entity.AuditUserToggle, "user", id, map[string]string{"to": status})
 	return nil
 }
 
