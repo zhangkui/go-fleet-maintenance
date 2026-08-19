@@ -216,7 +216,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID int64, oldPassw
 	if err := s.users.UpdateUserPassword(ctx, userID, hash); err != nil {
 		return err
 	}
-	_ = s.sessions.RevokeAllForUser(ctx, 0, time.Now())
+	_ = s.sessions.RevokeAllForUser(ctx, userID, time.Now())
 	s.audit.Record(ctx, entity.AuditActor{UserID: userID, Username: u.Username}, entity.AuditPasswordChange, "user", userID, nil)
 	return nil
 }

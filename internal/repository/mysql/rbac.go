@@ -236,6 +236,6 @@ func (r *SessionRepository) RevokeRefreshToken(ctx context.Context, hash string,
 
 // RevokeAllForUser 撤销用户全部刷新令牌（修改密码/退出全部设备时使用）。
 func (r *SessionRepository) RevokeAllForUser(ctx context.Context, userID int64, at time.Time) error {
-	_, err := r.db.ExecContext(ctx, "UPDATE refresh_tokens SET revoked_at=? WHERE user_id=? AND revoked_at IS NOT NULL", at, userID)
+	_, err := r.db.ExecContext(ctx, "UPDATE refresh_tokens SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL", at, userID)
 	return TranslateError(err)
 }
