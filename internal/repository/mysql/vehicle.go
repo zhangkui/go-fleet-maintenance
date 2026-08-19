@@ -147,7 +147,7 @@ func (r *VehicleRepository) UpdateVehicleLicenseExpiry(ctx context.Context, id i
 // AppendVehicleStatusHistory 追加车辆状态流转记录。
 func (r *VehicleRepository) AppendVehicleStatusHistory(ctx context.Context, h entity.VehicleStatusHistory) error {
 	_, err := r.db.ExecContext(ctx, `INSERT INTO vehicle_status_history(vehicle_id,from_status,to_status,reason,changed_by)
-		VALUES(?,?,?,?,?)`, h.VehicleID, h.ToStatus, h.FromStatus, h.Reason, h.ChangedBy)
+		VALUES(?,?,?,?,?)`, h.VehicleID, h.FromStatus, h.ToStatus, h.Reason, h.ChangedBy)
 	return TranslateError(err)
 }
 
