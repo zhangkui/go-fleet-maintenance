@@ -1,0 +1,4 @@
+case_id: BUG-009
+architecture: linux/arm64
+record_type: run
+status: NOT_RUN
