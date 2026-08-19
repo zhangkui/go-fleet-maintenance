@@ -120,7 +120,7 @@ func (r *FuelRepository) LastFuelRecord(ctx context.Context, vehicleID int64) (e
 // RecentFuelRecords 取车辆最近 N 条油耗记录（按里程升序），用于异常识别。
 func (r *FuelRepository) RecentFuelRecords(ctx context.Context, vehicleID int64, limit int) ([]entity.FuelRecord, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id,vehicle_id,liters_milli,unit_price_cents,odometer_km,total_cost_cents,abnormal,recorded_at,idempotency_key,created_by,created_at
-		FROM fuel_records WHERE vehicle_id=? ORDER BY odometer_km ASC LIMIT ?`, vehicleID, limit)
+		FROM fuel_records WHERE vehicle_id=? ORDER BY odometer_km DESC LIMIT ?`, vehicleID, limit)
 	if err != nil {
 		return nil, TranslateError(err)
 	}

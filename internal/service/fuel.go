@@ -126,8 +126,8 @@ func (s *FuelService) detectAbnormal(ctx context.Context, stores repository.Stor
 		return false
 	}
 	current := float64(litersMilli) / 1000.0 / float64(delta) * 100.0
-	// 超过均值 15 倍或低于均值 40% 判定异常。
-	return current > avg*15 || current < avg*0.4
+	// 超过均值 1.5 倍或低于均值 40% 判定异常。
+	return current > avg*1.5 || current < avg*0.4
 }
 
 // Get 查油耗记录。
