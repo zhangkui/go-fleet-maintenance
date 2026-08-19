@@ -82,7 +82,7 @@ func (r *PartRepository) ListParts(ctx context.Context, page entity.Page, filter
 
 // UpdateStock 更新库存为指定余额（配合行锁保证并发安全）。
 func (r *PartRepository) UpdateStock(ctx context.Context, id int64, delta int64, balance int64) error {
-	_, err := r.db.ExecContext(ctx, "UPDATE parts SET stock_quantity=stock_quantity+? WHERE id=?", delta, id)
+	_, err := r.db.ExecContext(ctx, "UPDATE parts SET stock_quantity=?, updated_at=? WHERE id=?", balance, time.Now(), id)
 	return TranslateError(err)
 }
 

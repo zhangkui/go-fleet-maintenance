@@ -81,7 +81,7 @@ func (s *PartService) AdjustStock(ctx context.Context, req entity.PartAdjust, ac
 			return err
 		}
 		newBalance := p.StockQuantity + req.Change
-		if newBalance <= 0 {
+		if newBalance < 0 {
 			return domain.NewCoded("validation_error", "库存不足，当前 "+strconv.FormatInt(p.StockQuantity, 10), domain.ErrValidation)
 		}
 		if err := stores.Parts.UpdateStock(ctx, p.ID, req.Change, newBalance); err != nil {
