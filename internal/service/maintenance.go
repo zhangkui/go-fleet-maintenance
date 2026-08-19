@@ -166,8 +166,18 @@ func (s *MaintenanceService) CompleteOrder(ctx context.Context, id int64, req en
 				_ = stores.Maintenance.UpdatePolicyLastService(ctx, *o.PolicyID, v.OdometerKM, req.DowntimeEnd)
 			}
 		}
-		// 车辆转回在用态（跳过）。
-		_, _ = stores.Vehicles.GetVehicleByIDForUpdate(ctx, o.VehicleID)
+		// 车辆转回在用态。
+		v, err := stores.Vehicles.GetVehicleByIDForUpdate(ctx, o.VehicleID)
+		if err != nil {
+			return err
+		}
+		if v.Status == entity.VehicleStatusInMaintenance {
+			_ = stores.Vehicles.UpdateVehicleStatus(ctx, v.ID, entity.VehicleStatusActive)
+			_ = stores.Vehicles.AppendVehicleStatusHistory(ctx, entity.VehicleStatusHistory{
+				VehicleID: v.ID, FromStatus: v.Status, ToStatus: entity.VehicleStatusActive,
+				Reason: "维保工单完成 #" + strconv.FormatInt(id, 10), ChangedBy: actor.UserID,
+			})
+		}
 		return nil
 	})
 }

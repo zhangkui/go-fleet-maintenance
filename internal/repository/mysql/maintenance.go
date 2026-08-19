@@ -237,8 +237,8 @@ func (r *MaintenanceRepository) UpdateOrderStatus(ctx context.Context, id int64,
 
 // CompleteOrder 完成工单，写停运结束与完成时间。
 func (r *MaintenanceRepository) CompleteOrder(ctx context.Context, id int64, downtimeEnd time.Time) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE maintenance_orders SET status=?, updated_at=? WHERE id=?`,
-		entity.OrderStatusCompleted, time.Now(), id)
+	_, err := r.db.ExecContext(ctx, `UPDATE maintenance_orders SET status=?, downtime_end=?, completed_at=?, updated_at=? WHERE id=?`,
+		entity.OrderStatusCompleted, downtimeEnd, downtimeEnd, time.Now(), id)
 	return TranslateError(err)
 }
 
