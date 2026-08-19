@@ -155,7 +155,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken, ip string) (ent
 		return entity.AuthTokens{}, domain.ErrUnauthorized
 	}
 	// 撤销旧刷新令牌，签发新的（刷新令牌轮转）。
-	_ = s.sessions.RevokeRefreshToken(ctx, refreshToken, time.Now())
+	_ = s.sessions.RevokeRefreshToken(ctx, hash, time.Now())
 	roles, _ := s.roles.UserRoles(ctx, u.ID)
 	roleCodes := make([]string, 0, len(roles))
 	for _, r := range roles {
