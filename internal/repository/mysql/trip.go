@@ -134,9 +134,9 @@ func (r *TripRepository) ListTrips(ctx context.Context, page entity.Page, filter
 	return out, total, nil
 }
 
-// StartTrip 开始任务（scheduled -> in_progress）。
+// StartTrip 开始任务（scheduled -> in_progress）。只改状态与更新时间，完成时间保持为空。
 func (r *TripRepository) StartTrip(ctx context.Context, id int64, by int64, at time.Time) error {
-	_, err := r.db.ExecContext(ctx, "UPDATE trips SET status=?, completed_at=?, updated_at=? WHERE id=?", entity.TripStatusInProgress, at, at, id)
+	_, err := r.db.ExecContext(ctx, "UPDATE trips SET status=?, updated_at=? WHERE id=?", entity.TripStatusInProgress, at, id)
 	return TranslateError(err)
 }
 
