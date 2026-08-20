@@ -1,0 +1,499 @@
+﻿diff --git a/internal/service/bug006_010_helpers_test.go b/internal/service/bug006_010_helpers_test.go
+new file mode 100644
+--- /dev/null
++++ b/internal/service/bug006_010_helpers_test.go
+@@ -0,0 +1,77 @@
++package service_test
++
++import (
++	"context"
++	"time"
++
++	"github.com/zhangkui/go-fleet-maintenance/internal/domain/entity"
++	"github.com/zhangkui/go-fleet-maintenance/internal/repository"
++)
++
++type permissionStub struct {
++	repository.PermissionRepository
++	values []entity.Permission
++}
++
++func (s *permissionStub) RolePermissions(context.Context, int64) ([]entity.Permission, error) {
++	return s.values, nil
++}
++
++type vehicleStub struct {
++	repository.VehicleRepository
++	vehicle        entity.Vehicle
++	updatedAt      time.Time
++	updatedMileage int64
++	expiryKind     string
++	history        entity.VehicleStatusHistory
++	status         string
++}
++
++func (s *vehicleStub) GetVehicleByID(context.Context, int64) (entity.Vehicle, error) {
++	return s.vehicle, nil
++}
++func (s *vehicleStub) GetVehicleByIDForUpdate(context.Context, int64) (entity.Vehicle, error) {
++	return s.vehicle, nil
++}
++func (s *vehicleStub) UpdateVehicleMileage(_ context.Context, _ int64, odometer int64, at time.Time) error {
++	s.updatedMileage = odometer
++	s.updatedAt = at
++	return nil
++}
++func (s *vehicleStub) UpdateVehicleStatus(_ context.Context, _ int64, status string) error {
++	s.status = status
++	return nil
++}
++func (s *vehicleStub) AppendVehicleStatusHistory(_ context.Context, h entity.VehicleStatusHistory) error {
++	s.history = h
++	return nil
++}
++func (s *vehicleStub) CreateVehicleLicense(_ context.Context, l entity.VehicleLicense) (entity.VehicleLicense, error) {
++	l.ID = 1
++	return l, nil
++}
++func (s *vehicleStub) UpdateVehicleLicenseExpiry(_ context.Context, _ int64, kind string, _ time.Time) error {
++	s.expiryKind = kind
++	return nil
++}
++
++type transactorStub struct{ stores repository.Stores }
++
++func (s transactorStub) WithinTx(ctx context.Context, fn func(repository.Stores) error) error {
++	return fn(s.stores)
++}
++
++type driverStub struct {
++	repository.DriverRepository
++	checkedAt time.Time
++	created   entity.DriverVehicleBinding
++}
++
++func (s *driverStub) HasActiveBindingForVehicle(_ context.Context, _ int64, at time.Time) (bool, error) {
++	s.checkedAt = at
++	return false, nil
++}
++func (s *driverStub) CreateBinding(_ context.Context, b entity.DriverVehicleBinding) (entity.DriverVehicleBinding, error) {
++	s.created = b
++	return b, nil
++}
+diff --git a/internal/service/bug011_017_native_test.go b/internal/service/bug011_017_native_test.go
+new file mode 100644
+--- /dev/null
++++ b/internal/service/bug011_017_native_test.go
+@@ -0,0 +1,223 @@
++package service_test
++
++import (
++	"context"
++	"testing"
++	"time"
++
++	"github.com/DATA-DOG/go-sqlmock"
++	"github.com/zhangkui/go-fleet-maintenance/internal/domain/entity"
++	"github.com/zhangkui/go-fleet-maintenance/internal/repository"
++	mysqlrepo "github.com/zhangkui/go-fleet-maintenance/internal/repository/mysql"
++	"github.com/zhangkui/go-fleet-maintenance/internal/service"
++)
++
++type driverBehaviorStub struct {
++	repository.DriverRepository
++	schedule  entity.DriverSchedule
++	violation entity.DriverViolation
++}
++
++func (s *driverBehaviorStub) CreateSchedule(_ context.Context, schedule entity.DriverSchedule) (entity.DriverSchedule, error) {
++	s.schedule = schedule
++	return schedule, nil
++}
++
++func (s *driverBehaviorStub) CreateViolation(_ context.Context, violation entity.DriverViolation) (entity.DriverViolation, error) {
++	s.violation = violation
++	violation.ID = 1
++	return violation, nil
++}
++
++type auditCaptureStub struct {
++	repository.AuditRepository
++	entry entity.AuditLog
++}
++
++func (s *auditCaptureStub) Append(_ context.Context, entry entity.AuditLog) (entity.AuditLog, error) {
++	s.entry = entry
++	return entry, nil
++}
++
++type tripBehaviorStub struct {
++	repository.TripRepository
++	trip              entity.Trip
++	completedOdometer int64
++	startedAt         time.Time
++	handover          entity.TripHandover
++}
++
++func (s *tripBehaviorStub) GetTripByIDForUpdate(context.Context, int64) (entity.Trip, error) {
++	return s.trip, nil
++}
++
++func (s *tripBehaviorStub) GetTripByID(context.Context, int64) (entity.Trip, error) {
++	return s.trip, nil
++}
++
++func (s *tripBehaviorStub) CompleteTrip(_ context.Context, _ int64, odometer int64, _ int64, _ time.Time) error {
++	s.completedOdometer = odometer
++	return nil
++}
++
++func (s *tripBehaviorStub) StartTrip(_ context.Context, _ int64, _ int64, at time.Time) error {
++	s.startedAt = at
++	return nil
++}
++
++func (s *tripBehaviorStub) AppendTripStatusHistory(context.Context, entity.TripStatusHistory) error {
++	return nil
++}
++
++func (s *tripBehaviorStub) CreateHandover(_ context.Context, handover entity.TripHandover) (entity.TripHandover, error) {
++	s.handover = handover
++	return handover, nil
++}
++
++type fuelBehaviorStub struct {
++	repository.FuelRepository
++	recent  []entity.FuelRecord
++	created entity.FuelRecord
++}
++
++func (s *fuelBehaviorStub) RecentFuelRecords(context.Context, int64, int) ([]entity.FuelRecord, error) {
++	return s.recent, nil
++}
++
++func (s *fuelBehaviorStub) CreateFuelRecord(_ context.Context, record entity.FuelRecord) (entity.FuelRecord, error) {
++	s.created = record
++	record.ID = 1
++	return record, nil
++}
++
++func TestBug011_DriverOffShiftValidation(t *testing.T) {
++	repo := &driverBehaviorStub{}
++	svc := service.NewDriverService(repo, nil)
++	_, err := svc.CreateSchedule(context.Background(), entity.DriverSchedule{DriverID: 1, ShiftDate: time.Now(), ShiftType: "off"})
++	if err != nil {
++		t.Fatalf("off shift should be valid: %v", err)
++	}
++	if entity.ShiftOff != "off" {
++		t.Fatalf("ShiftOff=%q", entity.ShiftOff)
++	}
++}
++
++func TestBug012_DriverViolationFineCents(t *testing.T) {
++	repo := &driverBehaviorStub{}
++	auditRepo := &auditCaptureStub{}
++	svc := service.NewDriverService(repo, service.NewAuditService(auditRepo))
++	created, err := svc.CreateViolation(context.Background(), entity.DriverViolation{DriverID: 1, ViolationType: "speeding", FineCents: 12345}, entity.AuditActor{UserID: 2})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if created.FineCents != 12345 || repo.violation.FineCents != 12345 {
++		t.Fatalf("fine cents changed: created=%d stored=%d", created.FineCents, repo.violation.FineCents)
++	}
++}
++
++func TestBug013_TripCompletionOdometer(t *testing.T) {
++	tripRepo := &tripBehaviorStub{trip: entity.Trip{ID: 1, VehicleID: 2, Status: entity.TripStatusInProgress, StartOdometerKM: 100}}
++	vehicleRepo := &vehicleStub{vehicle: entity.Vehicle{ID: 2, OdometerKM: 100}}
++	tx := transactorStub{stores: repository.Stores{Trips: tripRepo, Vehicles: vehicleRepo}}
++	svc := service.NewTripService(tripRepo, vehicleRepo, nil, nil, tx, service.NewAuditService(&auditCaptureStub{}), nil)
++	_, err := svc.Complete(context.Background(), 1, entity.TripComplete{EndOdometerKM: 180, CompletedAt: time.Now()}, entity.AuditActor{UserID: 9})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if tripRepo.completedOdometer != 180 || vehicleRepo.updatedMileage != 180 {
++		t.Fatalf("trip=%d vehicle=%d", tripRepo.completedOdometer, vehicleRepo.updatedMileage)
++	}
++
++	db, mock, _ := sqlmock.New()
++	defer db.Close()
++	mock.ExpectExec("UPDATE trips SET status=\\?, end_odometer_km=\\?, completed_at=\\?, completed_by=\\?, updated_at=\\? WHERE id=\\?").
++		WithArgs(entity.TripStatusCompleted, int64(180), sqlmock.AnyArg(), int64(9), sqlmock.AnyArg(), int64(1)).
++		WillReturnResult(sqlmock.NewResult(0, 1))
++	if err := mysqlrepo.NewTripRepository(db).CompleteTrip(context.Background(), 1, 180, 9, time.Now()); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestBug014_TripStartTimestamps(t *testing.T) {
++	repo := &tripBehaviorStub{trip: entity.Trip{ID: 1, Status: entity.TripStatusScheduled}}
++	tx := transactorStub{stores: repository.Stores{Trips: repo}}
++	svc := service.NewTripService(repo, nil, nil, nil, tx, nil, nil)
++	before := time.Now()
++	if err := svc.Start(context.Background(), 1, entity.AuditActor{UserID: 5}); err != nil {
++		t.Fatal(err)
++	}
++	if repo.startedAt.Before(before) {
++		t.Fatalf("started_at=%v before=%v", repo.startedAt, before)
++	}
++	db, mock, _ := sqlmock.New()
++	defer db.Close()
++	mock.ExpectExec("UPDATE trips SET status=\\?, updated_at=\\? WHERE id=\\?").
++		WithArgs(entity.TripStatusInProgress, sqlmock.AnyArg(), int64(1)).WillReturnResult(sqlmock.NewResult(0, 1))
++	if err := mysqlrepo.NewTripRepository(db).StartTrip(context.Background(), 1, 5, time.Now()); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestBug015_TripHandoverValidation(t *testing.T) {
++	repo := &tripBehaviorStub{}
++	svc := service.NewTripService(repo, nil, nil, nil, nil, nil, nil)
++	invalid := []entity.TripHandover{
++		{TripID: 1, FromDriverID: 0, ToDriverID: 2},
++		{TripID: 1, FromDriverID: 2, ToDriverID: 0},
++		{TripID: 1, FromDriverID: 2, ToDriverID: 2},
++	}
++	for _, handover := range invalid {
++		if _, err := svc.CreateHandover(context.Background(), handover); err == nil {
++			t.Fatalf("accepted invalid handover: %+v", handover)
++		}
++	}
++}
++
++func TestBug016_FuelCostRounding(t *testing.T) {
++	fuelRepo := &fuelBehaviorStub{}
++	vehicleRepo := &vehicleStub{vehicle: entity.Vehicle{ID: 1, OdometerKM: 100}}
++	tx := transactorStub{stores: repository.Stores{Fuel: fuelRepo, Vehicles: vehicleRepo}}
++	auditRepo := &auditCaptureStub{}
++	svc := service.NewFuelService(fuelRepo, vehicleRepo, tx, service.NewAuditService(auditRepo), nil)
++	created, err := svc.Record(context.Background(), entity.FuelInput{VehicleID: 1, LitersMilli: 1501, UnitPriceCents: 701, OdometerKM: 110, IdempotencyKey: "bug016"}, entity.AuditActor{UserID: 1})
++	if err != nil {
++		t.Fatal(err)
++	}
++	want := int64(1501 * 701 / 1000)
++	if created.TotalCostCents != want || fuelRepo.created.TotalCostCents != want {
++		t.Fatalf("cost=%d stored=%d want=%d", created.TotalCostCents, fuelRepo.created.TotalCostCents, want)
++	}
++
++	db, mock, _ := sqlmock.New()
++	defer db.Close()
++	mock.ExpectExec("INSERT INTO fuel_records").WithArgs(int64(1), int64(1501), int64(701), int64(110), want, false, sqlmock.AnyArg(), "bug016", int64(1)).WillReturnResult(sqlmock.NewResult(1, 1))
++	if _, err := mysqlrepo.NewFuelRepository(db).CreateFuelRecord(context.Background(), entity.FuelRecord{VehicleID: 1, LitersMilli: 1501, UnitPriceCents: 701, OdometerKM: 110, TotalCostCents: want, IdempotencyKey: "bug016", CreatedBy: 1}); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestBug017_FuelAnomalyDetection(t *testing.T) {
++	fuelRepo := &fuelBehaviorStub{recent: []entity.FuelRecord{
++		{OdometerKM: 100, LitersMilli: 0},
++		{OdometerKM: 200, LitersMilli: 10000},
++		{OdometerKM: 300, LitersMilli: 10000},
++	}}
++	vehicleRepo := &vehicleStub{vehicle: entity.Vehicle{ID: 1, OdometerKM: 300}}
++	tx := transactorStub{stores: repository.Stores{Fuel: fuelRepo, Vehicles: vehicleRepo}}
++	svc := service.NewFuelService(fuelRepo, vehicleRepo, tx, service.NewAuditService(&auditCaptureStub{}), nil)
++	created, err := svc.Record(context.Background(), entity.FuelInput{VehicleID: 1, LitersMilli: 20000, UnitPriceCents: 700, OdometerKM: 400, IdempotencyKey: "bug017"}, entity.AuditActor{UserID: 1})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if !created.Abnormal {
++		t.Fatal("1.5x+ fuel consumption should be abnormal")
++	}
++
++	db, mock, _ := sqlmock.New()
++	defer db.Close()
++	rows := sqlmock.NewRows([]string{"id", "vehicle_id", "liters_milli", "unit_price_cents", "odometer_km", "total_cost_cents", "abnormal", "recorded_at", "idempotency_key", "created_by", "created_at"})
++	mock.ExpectQuery("ORDER BY odometer_km DESC LIMIT \\?").WithArgs(int64(1), 5).WillReturnRows(rows)
++	if _, err := mysqlrepo.NewFuelRepository(db).RecentFuelRecords(context.Background(), 1, 5); err != nil {
++		t.Fatal(err)
++	}
++}
+diff --git a/internal/service/bug025_030_native_test.go b/internal/service/bug025_030_native_test.go
+new file mode 100644
+--- /dev/null
++++ b/internal/service/bug025_030_native_test.go
+@@ -0,0 +1,184 @@
++package service_test
++
++import (
++	"context"
++	"net/http/httptest"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/DATA-DOG/go-sqlmock"
++	"github.com/alicebob/miniredis/v2"
++	"github.com/zhangkui/go-fleet-maintenance/internal/domain/entity"
++	"github.com/zhangkui/go-fleet-maintenance/internal/platform/redisx"
++	"github.com/zhangkui/go-fleet-maintenance/internal/repository"
++	mysqlrepo "github.com/zhangkui/go-fleet-maintenance/internal/repository/mysql"
++	"github.com/zhangkui/go-fleet-maintenance/internal/service"
++	"github.com/zhangkui/go-fleet-maintenance/internal/transport/http/handler"
++)
++
++type reportBehaviorStub struct {
++	repository.ReportRepository
++	summary  entity.FleetSummary
++	from, to time.Time
++}
++
++func (s *reportBehaviorStub) FleetSummary(context.Context) (entity.FleetSummary, error) {
++	return s.summary, nil
++}
++func (s *reportBehaviorStub) FuelEfficiency(_ context.Context, from, to time.Time, _ entity.Page) ([]entity.FuelEfficiencyReport, int64, error) {
++	s.from, s.to = from, to
++	return nil, 0, nil
++}
++
++type userBehaviorStub struct {
++	repository.UserRepository
++	user          entity.User
++	filter        entity.Filter
++	updatedID     int64
++	updatedStatus string
++}
++
++func (s *userBehaviorStub) GetUserByID(context.Context, int64) (entity.User, error) {
++	return s.user, nil
++}
++func (s *userBehaviorStub) UpdateUserStatus(_ context.Context, id int64, status string) error {
++	s.updatedID, s.updatedStatus = id, status
++	return nil
++}
++func (s *userBehaviorStub) ListUsers(_ context.Context, _ entity.Page, filter entity.Filter) ([]entity.User, int64, error) {
++	s.filter = filter
++	return nil, 0, nil
++}
++
++type auditListStub struct {
++	repository.AuditRepository
++	filter  entity.Filter
++	entries []entity.AuditLog
++}
++
++func (s *auditListStub) Append(_ context.Context, entry entity.AuditLog) (entity.AuditLog, error) {
++	s.entries = append(s.entries, entry)
++	return entry, nil
++}
++func (s *auditListStub) List(_ context.Context, _ entity.Page, filter entity.Filter) ([]entity.AuditLog, int64, error) {
++	s.filter = filter
++	return nil, 0, nil
++}
++
++func TestBug025_FleetSummaryCacheTTL(t *testing.T) {
++	server := miniredis.RunT(t)
++	client, err := redisx.New(server.Addr(), "", 0, "bug025:")
++	if err != nil {
++		t.Fatal(err)
++	}
++	ctx := context.Background()
++	if err := client.SetCache(ctx, "no-expiry", []byte("x"), 0); err != nil {
++		t.Fatal(err)
++	}
++	if ttl := server.TTL("bug025:cache:no-expiry"); ttl != 0 {
++		t.Fatalf("zero TTL should remain persistent, got %v", ttl)
++	}
++	repo := &reportBehaviorStub{summary: entity.FleetSummary{TotalVehicles: 3}}
++	if _, err := service.NewReportService(repo, client).FleetSummary(ctx); err != nil {
++		t.Fatal(err)
++	}
++	ttl := server.TTL("bug025:cache:fleet:summary")
++	if ttl < 59*time.Second || ttl > 60*time.Second {
++		t.Fatalf("summary ttl=%v", ttl)
++	}
++}
++
++func TestBug026_FuelEfficiencyReport(t *testing.T) {
++	repo := &reportBehaviorStub{}
++	if _, _, err := service.NewReportService(repo, nil).FuelEfficiency(context.Background(), entity.ReportQuery{}); err != nil {
++		t.Fatal(err)
++	}
++	if !repo.from.Before(repo.to) || repo.to.Sub(repo.from) < 27*24*time.Hour {
++		t.Fatalf("default range from=%v to=%v", repo.from, repo.to)
++	}
++	db, mock, _ := sqlmock.New()
++	defer db.Close()
++	from, to := time.Now().AddDate(0, -1, 0), time.Now()
++	mock.ExpectQuery("SELECT COUNT\\(DISTINCT vehicle_id\\)").WithArgs(from, to).WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
++	mock.ExpectQuery("FROM vehicles v JOIN fuel_records").WithArgs(from, to, 20, 0).WillReturnRows(sqlmock.NewRows([]string{"id", "plate", "liters", "distance", "cost", "abnormal"}).AddRow(1, "A", 10000, 100, 5000, 0))
++	rows, _, err := mysqlrepo.NewReportRepository(db).FuelEfficiency(context.Background(), from, to, entity.Page{Limit: 20})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if len(rows) != 1 || rows[0].LitersPer100KM != 10 {
++		t.Fatalf("report=%+v", rows)
++	}
++}
++
++func TestBug027_AuditAppendFidelity(t *testing.T) {
++	capture := &auditListStub{}
++	service.NewAuditService(capture).Record(context.Background(), entity.AuditActor{UserID: 7, Username: "admin", IP: "10.0.0.7"}, "part.adjust", "part", 3, map[string]int64{"balance": 4})
++	if len(capture.entries) != 1 || !strings.Contains(capture.entries[0].Detail, "balance") {
++		t.Fatalf("entry=%+v", capture.entries)
++	}
++	db, mock, _ := sqlmock.New()
++	defer db.Close()
++	mock.ExpectExec("INSERT INTO audit_logs").WithArgs(int64(7), "admin", "part.adjust", "part", int64(3), `{"balance":4}`, "10.0.0.7").WillReturnResult(sqlmock.NewResult(1, 1))
++	_, err := mysqlrepo.NewAuditRepository(db).Append(context.Background(), entity.AuditLog{ActorUserID: 7, ActorName: "admin", Action: "part.adjust", ResourceType: "part", ResourceID: 3, Detail: `{"balance":4}`, IP: "10.0.0.7"})
++	if err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestBug028_AuditActionFilter(t *testing.T) {
++	audits := &auditListStub{}
++	svc := service.NewUserService(&userBehaviorStub{}, service.NewAuditService(audits))
++	recorder := httptest.NewRecorder()
++	request := httptest.NewRequest("GET", "/api/audit-logs?action=auth.login", nil)
++	handler.NewUserHandler(svc, 1024).AuditLogs(recorder, request)
++	if audits.filter.Status != "auth.login" {
++		t.Fatalf("filter=%q", audits.filter.Status)
++	}
++	db, mock, _ := sqlmock.New()
++	defer db.Close()
++	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM audit_logs WHERE 1=1 AND action=\\?").WithArgs("auth.login").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
++	mock.ExpectQuery("FROM audit_logs WHERE 1=1 AND action=\\?").WithArgs("auth.login", 20, 0).WillReturnRows(sqlmock.NewRows([]string{"id", "actor_user_id", "actor_name", "action", "resource_type", "resource_id", "detail", "ip", "created_at"}))
++	if _, _, err := mysqlrepo.NewAuditRepository(db).List(context.Background(), entity.Page{Limit: 20}, entity.Filter{Status: "auth.login"}); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestBug029_UserStatusAudit(t *testing.T) {
++	users := &userBehaviorStub{user: entity.User{ID: 4, Status: entity.UserStatusActive}}
++	audits := &auditListStub{}
++	svc := service.NewUserService(users, service.NewAuditService(audits))
++	if err := svc.ToggleUserStatus(context.Background(), 4, false, entity.AuditActor{UserID: 1}); err != nil {
++		t.Fatal(err)
++	}
++	if users.updatedID != 4 || users.updatedStatus != entity.UserStatusDisabled {
++		t.Fatalf("update id=%d status=%q", users.updatedID, users.updatedStatus)
++	}
++	if len(audits.entries) != 1 || audits.entries[0].Action != entity.AuditUserToggle {
++		t.Fatalf("audit=%+v", audits.entries)
++	}
++	db, mock, _ := sqlmock.New()
++	defer db.Close()
++	mock.ExpectExec("UPDATE users SET status=\\? WHERE id=\\?").WithArgs(entity.UserStatusDisabled, int64(4)).WillReturnResult(sqlmock.NewResult(0, 1))
++	if err := mysqlrepo.NewUserRepository(db).UpdateUserStatus(context.Background(), 4, entity.UserStatusDisabled); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func TestBug030_UserStatusVisibility(t *testing.T) {
++	users := &userBehaviorStub{}
++	svc := service.NewUserService(users, service.NewAuditService(&auditListStub{}))
++	recorder := httptest.NewRecorder()
++	request := httptest.NewRequest("GET", "/api/users?limit=20", nil)
++	handler.NewUserHandler(svc, 1024).List(recorder, request)
++	if users.filter.Status != "" {
++		t.Fatalf("default status=%q", users.filter.Status)
++	}
++	db, mock, _ := sqlmock.New()
++	defer db.Close()
++	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM users WHERE 1=1").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
++	mock.ExpectQuery("FROM users WHERE 1=1 ORDER BY id DESC LIMIT \\? OFFSET \\?").WithArgs(20, 0).WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "full_name", "status", "last_login_at", "created_at", "updated_at"}))
++	if _, _, err := mysqlrepo.NewUserRepository(db).ListUsers(context.Background(), entity.Page{Limit: 20}, entity.Filter{}); err != nil {
++		t.Fatal(err)
++	}
++}
