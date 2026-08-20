@@ -68,10 +68,10 @@ func (r *UserRepository) GetUserByUsername(ctx context.Context, username string)
 
 // ListUsers 分页列出用户。
 func (r *UserRepository) ListUsers(ctx context.Context, page entity.Page, filter entity.Filter) ([]entity.User, int64, error) {
-	where := "WHERE status='active'"
+	where := "WHERE 1=1"
 	args := []interface{}{}
 	if filter.Status != "" {
-		where = "WHERE status=?"
+		where += " AND status=?"
 		args = append(args, filter.Status)
 	}
 	if filter.Keyword != "" {
