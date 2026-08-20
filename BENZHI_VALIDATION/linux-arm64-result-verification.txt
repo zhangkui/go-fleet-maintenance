@@ -1,0 +1,4 @@
+﻿case_id: BUG-024
+architecture: linux/arm64
+record_type: result-verification
+status: NOT_RUN
