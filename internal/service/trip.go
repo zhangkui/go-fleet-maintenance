@@ -138,7 +138,7 @@ func (s *TripService) Complete(ctx context.Context, id int64, req entity.TripCom
 			return err
 		}
 		t.Status = entity.TripStatusCompleted
-		edo := t.StartOdometerKM
+		edo := req.EndOdometerKM
 		t.EndOdometerKM = &edo
 		result = t
 		return nil

@@ -142,8 +142,8 @@ func (r *TripRepository) StartTrip(ctx context.Context, id int64, by int64, at t
 
 // CompleteTrip 完成任务，写结束里程与完成时间。
 func (r *TripRepository) CompleteTrip(ctx context.Context, id int64, endOdometer int64, completedBy int64, at time.Time) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE trips SET status=?, completed_at=?, completed_by=?, updated_at=? WHERE id=?`,
-		entity.TripStatusCompleted, at, completedBy, at, id)
+	_, err := r.db.ExecContext(ctx, `UPDATE trips SET status=?, end_odometer_km=?, completed_at=?, completed_by=?, updated_at=? WHERE id=?`,
+		entity.TripStatusCompleted, endOdometer, at, completedBy, at, id)
 	return TranslateError(err)
 }
 
