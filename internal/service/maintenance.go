@@ -159,15 +159,23 @@ func (s *MaintenanceService) CompleteOrder(ctx context.Context, id int64, req en
 		}); err != nil {
 			return err
 		}
+		// 取车辆（含当前状态）：用于更新计划上次保养里程与恢复在用态。
+		v, err := stores.Vehicles.GetVehicleByIDForUpdate(ctx, o.VehicleID)
+		if err != nil {
+			return err
+		}
 		// 更新计划上次保养里程与日期。
 		if o.PolicyID != nil {
-			v, err := stores.Vehicles.GetVehicleByIDForUpdate(ctx, o.VehicleID)
-			if err == nil {
-				_ = stores.Maintenance.UpdatePolicyLastService(ctx, *o.PolicyID, v.OdometerKM, req.DowntimeEnd)
-			}
+			_ = stores.Maintenance.UpdatePolicyLastService(ctx, *o.PolicyID, v.OdometerKM, req.DowntimeEnd)
 		}
-		// 车辆转回在用态（跳过）。
-		_, _ = stores.Vehicles.GetVehicleByIDForUpdate(ctx, o.VehicleID)
+		// 车辆转回在用态并写状态历史。
+		if v.Status != entity.VehicleStatusActive {
+			_ = stores.Vehicles.UpdateVehicleStatus(ctx, v.ID, entity.VehicleStatusActive)
+			_ = stores.Vehicles.AppendVehicleStatusHistory(ctx, entity.VehicleStatusHistory{
+				VehicleID: v.ID, FromStatus: v.Status, ToStatus: entity.VehicleStatusActive,
+				Reason: "维保工单 #" + strconv.FormatInt(o.ID, 10) + " 完工", ChangedBy: actor.UserID,
+			})
+		}
 		return nil
 	})
 }
