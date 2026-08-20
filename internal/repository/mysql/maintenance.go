@@ -137,6 +137,7 @@ func scanOrder(sc func(...interface{}) error, o *entity.MaintenanceOrder) error 
 }
 
 // CreateOrder 创建工单及配件明细，事务由上层保证。
+// 工单主记录、配件明细行、配件费/合计在同一事务内写入；任一步失败由上层回滚。
 func (r *MaintenanceRepository) CreateOrder(ctx context.Context, o entity.MaintenanceOrder, parts []entity.MaintenanceOrderPart) (entity.MaintenanceOrder, error) {
 	res, err := r.db.ExecContext(ctx, `INSERT INTO maintenance_orders(vehicle_id,policy_id,kind,title,status,idempotency_key,downtime_start,downtime_end,parts_cost_cents,labor_cost_cents,total_cost_cents,created_by)
 		VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`, o.VehicleID, i64PtrPtr(o.PolicyID), o.Kind, o.Title, o.Status, o.IdempotencyKey,
@@ -149,9 +150,24 @@ func (r *MaintenanceRepository) CreateOrder(ctx context.Context, o entity.Mainte
 		return entity.MaintenanceOrder{}, err
 	}
 	o.ID = id
-	// 不写配件明细。
-	o.PartsCostCents = 0
-	o.TotalCostCents = o.LaborCostCents
+	// 写配件明细并累加配件费，line_total_cents = quantity * unit_cost_cents。
+	var partsCostCents int64
+	for i := range parts {
+		line := parts[i]
+		line.OrderID = id
+		line.LineTotalCents = line.Quantity * line.UnitCostCents
+		if _, err := r.db.ExecContext(ctx, `INSERT INTO maintenance_order_parts(order_id,part_id,quantity,unit_cost_cents,line_total_cents)
+			VALUES(?,?,?,?,?)`, line.OrderID, line.PartID, line.Quantity, line.UnitCostCents, line.LineTotalCents); err != nil {
+			return entity.MaintenanceOrder{}, TranslateError(err)
+		}
+		partsCostCents += line.LineTotalCents
+	}
+	// 回写配件费与合计：total = 配件费 + 工时费。
+	o.PartsCostCents = partsCostCents
+	o.TotalCostCents = o.LaborCostCents + partsCostCents
+	if _, err := r.db.ExecContext(ctx, `UPDATE maintenance_orders SET parts_cost_cents=?, total_cost_cents=? WHERE id=?`, o.PartsCostCents, o.TotalCostCents, o.ID); err != nil {
+		return entity.MaintenanceOrder{}, TranslateError(err)
+	}
 	o.CreatedAt = time.Now()
 	o.UpdatedAt = o.CreatedAt
 	return o, nil

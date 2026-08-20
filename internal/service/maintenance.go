@@ -84,18 +84,37 @@ func (s *MaintenanceService) CreateOrder(ctx context.Context, o entity.Maintenan
 				return domain.NewCoded("conflict", "该维保计划已有未完工工单", domain.ErrConflict)
 			}
 		}
-		// 校验配件存在但跳过扣减库存。
-		for i := range parts {
-			if _, err := stores.Parts.GetPartByIDForUpdate(ctx, parts[i].PartID); err != nil {
-				return err
-			}
-		}
 		created, err := stores.Maintenance.CreateOrder(ctx, o, parts)
 		if err != nil {
 			if isConflict(err) {
 				return domain.NewCoded("conflict", "重复的维保工单", err)
 			}
 			return err
+		}
+		// 扣减配件库存并写流水：工单主记录、配件明细、库存三者同事务，任一步失败整体回滚。
+		for i := range parts {
+			p, err := stores.Parts.GetPartByIDForUpdate(ctx, parts[i].PartID)
+			if err != nil {
+				return err
+			}
+			qty := parts[i].Quantity
+			if qty <= 0 {
+				return domain.NewCoded("validation_error", "配件消耗数量必须大于 0", domain.ErrValidation)
+			}
+			balance := p.StockQuantity - qty
+			if balance < 0 {
+				return domain.NewCoded("validation_error", "配件库存不足: "+p.SKU, domain.ErrValidation)
+			}
+			if err := stores.Parts.UpdateStock(ctx, p.ID, -qty, balance); err != nil {
+				return err
+			}
+			orderID := created.ID
+			if err := stores.Parts.AppendStockMovement(ctx, entity.PartStockMovement{
+				PartID: p.ID, ChangeQuantity: -qty, Reason: entity.StockReasonOrderConsumption,
+				RefOrderID: &orderID, BalanceAfter: balance, CreatedBy: actor.UserID,
+			}); err != nil {
+				return err
+			}
 		}
 		// 车辆转入维保态并写状态历史。
 		if v.Status != entity.VehicleStatusInMaintenance {
