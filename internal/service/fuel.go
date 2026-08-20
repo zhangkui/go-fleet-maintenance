@@ -41,13 +41,10 @@ func (s *FuelService) Record(ctx context.Context, in entity.FuelInput, actor ent
 	}
 	// 计算总价（分）：毫升 * 分/升 / 1000 / 1000 = 元*分 /...
 	// litersMilli(毫升) / 1000 = 升；单价 分/升；总价 = 升 * 单价 = (litersMilli/1000)*unitPriceCents 分。
-	// 用整数：totalCents = litersMilli * unitPriceCents / 1000。
+	// 用整数：totalCents = litersMilli * unitPriceCents / 1000（整数除法即向下取整，不在此处再向上补齐，
+	// 否则会与仓储层重复取整导致返回值与落库值各多一分）。总价计算唯一在此完成。
 	if in.TotalCostCents == 0 {
-		product := in.LitersMilli * in.UnitPriceCents
-		in.TotalCostCents = product / 1000
-		if product%1000 != 0 {
-			in.TotalCostCents++
-		}
+		in.TotalCostCents = in.LitersMilli * in.UnitPriceCents / 1000
 	}
 	if in.RecordedAt.IsZero() {
 		in.RecordedAt = s.now()
