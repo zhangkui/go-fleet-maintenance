@@ -1,0 +1,4 @@
+﻿case_id: BUG-028
+architecture: linux/amd64
+record_type: build
+status: NOT_RUN
