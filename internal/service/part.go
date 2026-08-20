@@ -54,7 +54,7 @@ func (s *PartService) List(ctx context.Context, page entity.Page, filter entity.
 	return s.repo.ListParts(ctx, page, filter)
 }
 
-// ListLowStock 列出低库存配件。
+// ListLowStock 列出低库存配件（库存量小于等于补货点）。
 func (s *PartService) ListLowStock(ctx context.Context) ([]entity.Part, error) {
 	parts, err := s.repo.ListLowStock(ctx)
 	if err != nil {
@@ -62,7 +62,7 @@ func (s *PartService) ListLowStock(ctx context.Context) ([]entity.Part, error) {
 	}
 	filtered := make([]entity.Part, 0, len(parts))
 	for _, part := range parts {
-		if part.StockQuantity < part.ReorderPoint {
+		if part.StockQuantity <= part.ReorderPoint {
 			filtered = append(filtered, part)
 		}
 	}

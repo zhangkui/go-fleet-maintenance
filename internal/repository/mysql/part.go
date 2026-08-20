@@ -121,10 +121,10 @@ func (r *PartRepository) ListStockMovements(ctx context.Context, partID int64, p
 	return out, total, nil
 }
 
-// ListLowStock 列出库存低于补货点的配件。
+// ListLowStock 列出库存低于或等于补货点的配件。
 func (r *PartRepository) ListLowStock(ctx context.Context) ([]entity.Part, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id,sku,name,unit,stock_quantity,reorder_point,unit_cost_cents,created_at,updated_at
-		FROM parts WHERE stock_quantity<reorder_point ORDER BY stock_quantity`)
+		FROM parts WHERE stock_quantity<=reorder_point ORDER BY stock_quantity`)
 	if err != nil {
 		return nil, TranslateError(err)
 	}
