@@ -104,8 +104,10 @@ func (r *UserRepository) ListUsers(ctx context.Context, page entity.Page, filter
 }
 
 // UpdateUserStatus 更新启停状态。
+// 占位符顺序为 status 在前、id 在后，参数须按列顺序传入 (status, id)，
+// 否则会把 id 写进 status 列、status 当作 id 匹配，导致禁用/启用命中错误行。
 func (r *UserRepository) UpdateUserStatus(ctx context.Context, id int64, status string) error {
-	_, err := r.db.ExecContext(ctx, "UPDATE users SET status=? WHERE id=?", id, status)
+	_, err := r.db.ExecContext(ctx, "UPDATE users SET status=? WHERE id=?", status, id)
 	return TranslateError(err)
 }
 

@@ -41,9 +41,11 @@ func (s *UserService) ToggleUserStatus(ctx context.Context, id int64, enable boo
 	if u.Status == status {
 		return nil
 	}
+	// 状态未更新成功时不记录成功审计；更新成功后再补记 user.toggle 审计。
 	if err := s.users.UpdateUserStatus(ctx, id, status); err != nil {
 		return err
 	}
+	s.audit.Record(ctx, actor, entity.AuditUserToggle, "user", id, map[string]string{"status": status})
 	return nil
 }
 
