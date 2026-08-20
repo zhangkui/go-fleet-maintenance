@@ -43,12 +43,11 @@ func (c *Client) Rdb() *redis.Client { return c.rdb }
 func (c *Client) key(k string) string { return c.keyPrefix + k }
 
 // SetCache 写入热点查询缓存。
+// ttl 为 0 表示不设过期（与 Redis SET 语义一致）：调用方显式选择持久化，
+// 而不会被隐式改写成长 TTL；需要过期时由调用方显式传入正数 TTL。
 func (c *Client) SetCache(ctx context.Context, key string, val []byte, ttl time.Duration) error {
 	if c == nil || c.rdb == nil {
 		return ErrRedisUnavailable
-	}
-	if ttl == 0 {
-		ttl = 24 * time.Hour
 	}
 	return c.rdb.Set(ctx, c.key("cache:"+key), val, ttl).Err()
 }

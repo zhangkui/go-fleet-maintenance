@@ -25,6 +25,7 @@ func NewReportService(repo repository.ReportRepository, redis *redisx.Client) *R
 // FleetSummary 车队总览，带 60 秒缓存。
 func (s *ReportService) FleetSummary(ctx context.Context) (entity.FleetSummary, error) {
 	const cacheKey = "fleet:summary"
+	const cacheTTL = 60 * time.Second
 	if b, err := s.redis.GetCache(ctx, cacheKey); err == nil && len(b) > 0 {
 		var sum entity.FleetSummary
 		if json.Unmarshal(b, &sum) == nil {
@@ -36,7 +37,7 @@ func (s *ReportService) FleetSummary(ctx context.Context) (entity.FleetSummary, 
 		return entity.FleetSummary{}, err
 	}
 	if b, err := json.Marshal(sum); err == nil {
-		_ = s.redis.SetCache(ctx, cacheKey, b, 0)
+		_ = s.redis.SetCache(ctx, cacheKey, b, cacheTTL)
 	}
 	return sum, nil
 }
