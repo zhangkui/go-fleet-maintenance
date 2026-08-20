@@ -36,7 +36,7 @@ func (r *ReminderRepository) CreateReminder(ctx context.Context, rem entity.Remi
 // ListPendingReminders 列出指定时间前未处理的提醒。
 func (r *ReminderRepository) ListPendingReminders(ctx context.Context, before time.Time) ([]entity.Reminder, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id,entity_type,entity_id,due_at,message,status,created_at,sent_at
-		FROM reminders WHERE status='pending' AND due_at>=? ORDER BY due_at`, before)
+		FROM reminders WHERE status='pending' AND due_at<=? ORDER BY due_at`, before)
 	if err != nil {
 		return nil, TranslateError(err)
 	}

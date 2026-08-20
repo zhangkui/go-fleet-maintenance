@@ -1,0 +1,4 @@
+﻿case_id: BUG-023
+architecture: linux/amd64
+record_type: run
+status: NOT_RUN

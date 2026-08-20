@@ -86,13 +86,19 @@ func (s *ReminderService) Scan(ctx context.Context, lookaheadDays int) (entity.R
 	return result, nil
 }
 
-// createIfAbsent 幂等创建提醒。
+// createIfAbsent 幂等创建提醒：同一实体同一到期日已有 pending 提醒则跳过，否则新建。
+// 以候选 dueAt 作为查询截止点，取出到期日不晚于该值的 pending 提醒，
+// 再按 (entityType, entityID, dueAt) 精确匹配去重，确保同一到期事件只保留一条。
 func (s *ReminderService) createIfAbsent(ctx context.Context, entityType string, entityID int64, dueAt time.Time, msg string) (bool, error) {
-	pending, err := s.repo.ListPendingReminders(ctx, time.Now())
+	pending, err := s.repo.ListPendingReminders(ctx, dueAt)
 	if err != nil {
 		return false, err
 	}
-	_ = pending
+	for _, p := range pending {
+		if p.EntityType == entityType && p.EntityID == entityID && p.DueAt.Equal(dueAt) {
+			return false, nil
+		}
+	}
 	if _, err := s.repo.CreateReminder(ctx, entity.Reminder{
 		EntityType: entityType, EntityID: entityID, DueAt: dueAt, Message: msg,
 	}); err != nil {
